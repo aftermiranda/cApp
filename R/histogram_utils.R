@@ -1,3 +1,10 @@
+theme_update(plot.title = element_text(hjust=0.5, size=20),
+             plot.subtitle = element_text(hjust=0.5, size=15),
+             panel.background = element_rect(fill = "white"),
+             axis.line = element_line(color = "darkgrey"),
+             panel.grid.major = element_line(color="darkgrey"),
+             panel.grid.minor = element_line(color="lightgrey"))
+
 
 #' Reduce data based on chosen parameters
 #'
@@ -85,26 +92,3 @@ get_plot <- function(df, gender, stat_item){
   }
   return(p1)
 }
-
-
-#' K Means Plotter for confidence data
-#'
-#' @param k_value number of divisions to use for k means evaluation
-#'
-#' @returns
-#' @export
-#'
-#' @examples
-plot_k <- function(k_value){
-  percentages$institution <- factor(percentages$institution)
-  percentages$ranks <- factor(percentages$ranks, ordered = TRUE)
-  percentages$month <- factor(percentages$month, levels = c("04","07","10"), labels = c("Q2", "Q3", "Q4"))
-  percentages$year <- as.integer(percentages$year)
-
-  findings <- (remove_missing(percentages), centers = k_value)
-
-  p1 <- ggplot(populations) + geom_boxplot(aes(x=month, y=value, color=gender)) +
-    facet_wrap(~year)
-  return(findings)
-}
-plot_k(3)
