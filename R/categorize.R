@@ -28,11 +28,11 @@ categorizeUI <- function(id){
                   selected = "Total"),
 
       # user input for sociodemographics
-      selectInput(NS(id, "socioSelect"),
-                  "Sociodemographics:",
-                  choices = unique(confidence_fact$sociodemographics),
-                  multiple = TRUE,
-                  ),
+      selectizeInput(NS(id, "socioSelect"),
+                     "Sociodemographics:",
+                     choices = unique(confidence_fact$sociodemographics),
+                     multiple = TRUE,
+                    ),
 
       # user input for other variables to include
       checkboxGroupInput(NS(id, "variables"),

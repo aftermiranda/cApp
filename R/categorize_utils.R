@@ -211,6 +211,20 @@ regression_tree <- function(obj){
 }
 
 
+
+factorize <- function(obj){
+  for(i in 1:ncol(obj)){
+    tmp <- names(obj[,i])
+    if(is.numeric(obj[[tmp]])){
+      pass
+    } else {
+      obj[[tmp]] <- as.factor(obj[[tmp]])
+    }
+  }
+  obj <- remove_missing(obj)
+  return(obj)
+}
+
 #' Multinomial Regression plot generator
 #'
 #' @param obj data frame containing user requested variables
@@ -220,21 +234,29 @@ regression_tree <- function(obj){
 #'
 #' @examples
 multinomial_regression <- function(obj){
+  # factor char/string variables
+  obj <- factorize(obj)
+
   # split data
   N <- nrow(obj)
   set_id <- split_data(N)
 
   # fit training data
-  fit <- multinom(ranks ~ ., data = obj, subset = set_id$training)
+  fit <- multinom(ranks ~ ., data = obj[set_id$training,])
   train_pred <- predict(fit, type = "class")
+  stopifnot(nrow(train_pred) == nrow(obj[set_id$training,]))
+
   train_tab <- table(actual=obj$ranks[set_id$training],
                      predicted=train_pred)
+  stopifnot(dim(train_tab) == c(3,3))
 
   # fit validation data
   val_pred <- predict(fit, type="class",
                       newdata=obj[set_id$validation,])
+  stopifnot(nrow(val_pred) == nrow(obj[set_id$validation,]))
   val_tab <- table(actual=obj$ranks[set_id$validation],
                    predicted=val_pred)
+  stopifnot(dim(val_tab) == c(3,3))
 
   # get plot
   t1 <- "Categorization using Multinomial Regression"
@@ -251,14 +273,12 @@ multinomial_regression <- function(obj){
 #'
 #' @examples
 random_forest <- function(obj){
+  # factor char/string variables
+  obj <- factorize(obj)
+
   # split data
   N <- nrow(obj)
   set_id <- split_data(N)
-
-  # rename "Total, all persons" column if present
-  if("Total, all persons" %in% names(obj)){
-    colnames(obj)[which(names(obj) == "Total, all persons")] <- "Total"
-  }
 
   # fit training data
   fit_rf <- randomForest(formula = ranks ~ ., data = obj[set_id$training,], importance = TRUE)
