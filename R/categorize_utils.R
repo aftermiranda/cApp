@@ -1,6 +1,7 @@
 library(rpart)
 library(nnet)
 library(randomForest)
+library(dplyr)
 
 theme_update(plot.title = element_text(hjust=0.5, size=20),
              plot.subtitle = element_text(hjust=0.5, size=15),
@@ -10,37 +11,79 @@ theme_update(plot.title = element_text(hjust=0.5, size=20),
              panel.grid.minor = element_line(color="lightgrey")
              )
 
+
+get_index <- function(obj, lst){
+  inds <- NULL
+
+  for(i in 1:length(lst)){
+    tmp <- lst[i]
+    ind_tmp <- which(obj == tmp)
+    inds <- c(inds, ind_tmp)
+  }
+  return(inds)
+}
+
+
 #' Categorization plot
 #'
 #' @param user_fun user selected function for categorization
 #' @param stat_item percentage or number of persons
 #' @param gender total, man, or woman
 #' @param variables user selected variables
+#' @param socio_demo user selected sociodemographics
+#' @param institution user selected institutions
 #'
 #' @returns
 #' @export
 #'
 #' @examples
-cat_plot <- function(user_fun, stat_item, gender=NULL, variables){
+cat_plot <- function(user_fun,
+                     stat_item,
+                     gender,
+                     variables,
+                     socio_demo=NULL,
+                     institution=NULL){
   # get data based on statistic
   if(stat_item == "Percentage of persons"){
-    d1 <- percentage_fact[,-2]
+    dt <- percentages
   }else{
-    d1 <- population_fact[,-2]
+    dt <- populations
+  }
+  stopifnot(nrow(dt) > 0)
+
+  all_variables <- c("sociodemographics", "institution", "ranks", gender)
+  dt <- dt %>%
+    select(all_variables)
+
+  stopifnot(ncol(dt) == 4)
+
+  # filter out sociodemographics
+  if(!is.null(socio_demo)){
+    inds_so <- get_index(dt$sociodemographics, socio_demo)
+    stopifnot(length(inds_so) > 0)
+    dt <- dt[inds_so,]
   }
 
-  all_variables <- c(variables, gender, "ranks")
-  d2 <- d1[,which(names(d1) %in% all_variables)]
+  # filter out institution
+  if(!is.null(institution)){
+    inds_in <- get_index(dt$institution, institution)
+    stopifnot(length(inds_in) > 0)
+    dt <- dt[inds_in,]
+  }
+
+  stopifnot(is.data.frame(dt))
+  stopifnot(nrow(dt) > 1)
+  stopifnot(ncol(dt) == 4)
 
   # call function user called with data required
   if(user_fun == "class_tree"){
-    fun_data <- regression_tree(d2)
+    fun_data <- regression_tree(dt)
   }
   if(user_fun == "mult_reg"){
-    fun_data <- multinomial_regression(d2)
+    fun_data <- multinomial_regression(dt)
   }
   if(user_fun == "rand_for"){
-    fun_data <- random_forest(d2)
+    fun_data <- random_forest(dt)
   }
   return(fun_data)
 }
@@ -64,7 +107,6 @@ split_data <- function(N){
 }
 
 
-
 #' Create labels for plot
 #'
 #' @param tab1 table of training results
@@ -74,7 +116,6 @@ split_data <- function(N){
 #'
 #' @examples
 #'
-
 pl_lab <- function(tab1, tab2){
   # create 9x2 table
   just <- expand.grid(hjust = c(1:3), vjust=c(1:3))
@@ -88,7 +129,6 @@ pl_lab <- function(tab1, tab2){
   }
   return(just)
 }
-
 
 
 #' Calculate prediction accuracy
@@ -135,6 +175,7 @@ generate_plot <- function(obj, tab1, tab2, set_id, t1, pred1, pred2){
   return(p1)
 }
 
+
 #' Regression tree categorizations
 #'
 #' @param obj data frame containing user requested variables
@@ -153,8 +194,10 @@ regression_tree <- function(obj){
                data = obj,
                subset = set_id$training)
   train_pred <- predict(fit, type = "class")
+  stopifnot(length(train_pred) == length(set_id$training))
+
   train_tab <- table(actual=obj$ranks[set_id$training],
-                     predicted=train_pred)
+                    predicted=train_pred)
 
   # fit validation data
   val_pred <- predict(fit, type="class",
@@ -166,6 +209,7 @@ regression_tree <- function(obj){
   t1 <- "Categorization using Regression Trees"
   return(generate_plot(obj, train_tab, val_tab, set_id, t1, train_pred,val_pred))
 }
+
 
 #' Multinomial Regression plot generator
 #'
@@ -196,6 +240,7 @@ multinomial_regression <- function(obj){
   t1 <- "Categorization using Multinomial Regression"
   return(generate_plot(obj, train_tab, val_tab, set_id, t1, train_pred,val_pred))
 }
+
 
 #' Random forest classification
 #'
